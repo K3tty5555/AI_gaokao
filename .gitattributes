@@ -1,0 +1,6 @@
+# 显式标明二进制数据文件 — git 不应当作文本 diff
+*.db    binary
+*.sqlite binary
+*.sqlite3 binary
+*.parquet binary
+*.db filter=lfs diff=lfs merge=lfs -text

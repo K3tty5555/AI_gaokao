@@ -1,0 +1,22 @@
+# 爬虫运行时日志(每次跑都会变,不进 git)
+crawl.log
+crawl.stdout.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# 数据库:.db 文件已通过 .gitattributes 标为 binary,
+# 本项目主动把 data/gaokao_hubei.db 提交进 git(便于 clone 即用),
+# 所以这里不忽略 .db。
