@@ -248,6 +248,13 @@ def estimate(
             result = score_to_rank_fallback(score, subject_type, year)
         # 附加批次分类(用于产品分流:本科 / 专科 / 复读)
         result["batch"] = classify_score(score, subject_type, year)
+        # 附加百分位(跨年对比和给用户更直观的展示)
+        if result.get("rank"):
+            table = _load_yifenduan(year, subject_type)
+            if table:
+                total = table[-1][2]  # 末行累计 ≈ 该年总考生数
+                result["total_candidates"] = total
+                result["percentile"] = round(result["rank"] / total * 100, 2)
         return result
     else:  # rank
         result = rank_to_score_official(rank, subject_type, year)
@@ -281,6 +288,11 @@ def fmt_human(result: dict) -> str:
         )
     out.append(f"  方法:{result['method']}({result.get('precision', '?')})")
     out.append(f"  说明:{result['note']}")
+    if result.get("percentile") is not None:
+        out.append(
+            f"  百分位:{result['subject_type']}前 {result['percentile']}% "
+            f"(该年总考生 {result['total_candidates']:,})"
+        )
     batch = result.get("batch")
     if batch and batch.get("bracket") != "unknown":
         out.append(f"  批次:{batch['label']}")
