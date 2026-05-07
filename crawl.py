@@ -20,7 +20,11 @@ from typing import Optional
 import requests
 
 ROOT = Path(__file__).resolve().parent
-DB_PATH = ROOT / "data" / "gaokao_hubei.db"
+# 默认按爬取年份归档:data/gaokao_hubei_<当前年>.db
+# 多次爬取同一年会断点续传(从 fetch_log 跳过已抓 URL)
+from datetime import date as _date
+
+DB_PATH = ROOT / "data" / f"gaokao_hubei_{_date.today().year}.db"
 LOG_PATH = ROOT / "crawl.log"
 
 UA = "Mozilla/5.0 (compatible; gaokao-research/0.1; +personal-use)"

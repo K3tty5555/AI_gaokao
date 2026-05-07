@@ -4,9 +4,21 @@
 
 ## 文件清单
 
-### `gaokao_hubei.db` (SQLite 数据库,~70 MB)
+### `gaokao_hubei_<YYYY>.db` (SQLite 数据库,每个 ~70 MB)
 
-**这是一个 SQLite 二进制数据库,不是源代码**。请勿用文本编辑器打开,会显示乱码。
+**这是 SQLite 二进制数据库,不是源代码**。请勿用文本编辑器打开,会显示乱码。
+
+**按爬取年份归档**:
+- `gaokao_hubei_2026.db` — 2026 年爬的快照(包含 2021-2025 历年录取数据)
+- `gaokao_hubei_2027.db` — 2027 年爬的快照(包含 2021-2026 历年录取数据,新增 2026 年高考结果)
+- 以此类推
+
+**为什么不直接覆盖**:
+- 各高校官方有时会修订历史位次/分数,旧快照保留有审计价值
+- 历年快照对比可做"大小年"风险分析
+- git diff 一个 70MB 二进制文件没意义,**多文件归档比单文件覆盖更易追溯**
+
+**lib.py 自动选最新**:运行查询脚本时自动用文件名最大年份的 db,无需手动指定。
 
 #### 数据来源
 
@@ -66,14 +78,25 @@ fetch_log (url, status, fetched_at, note)
 ### `province_scores.local_batch_name`(批次)
 - 本科批 / 专科批 / 高职高专批 / 提前批 等
 
-## 重新构建
+## 更新流程(每年一次)
+
+每年 6-7 月各高校发布上一年录取结果后,运行:
 
 ```bash
-# 删掉数据库,从头爬
-rm data/gaokao_hubei.db
+# 直接跑(自动写入 data/gaokao_hubei_<当前年>.db)
 python3 crawl.py
 # 等 3-4 小时
 
-# 或者断点续爬(已抓的 URL 会跳过)
-python3 crawl.py
+# 跑完会得到新一年的快照,旧快照自动保留作归档
+ls data/gaokao_hubei_*.db
+# data/gaokao_hubei_2026.db    ← 旧
+# data/gaokao_hubei_2027.db    ← 新
+
+# git 提交新快照
+git add data/gaokao_hubei_2027.db
+git commit -m "data: 2027 年高考录取数据快照"
 ```
+
+**断点续爬**:中途断了直接重跑,fetch_log 表会跳过已抓 URL。
+
+**只想清理本地**(保留 git 里的):本地 `rm` 即可,`git pull` / `git checkout` 还能找回。
