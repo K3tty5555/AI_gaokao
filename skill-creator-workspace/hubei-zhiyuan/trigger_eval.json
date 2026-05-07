@@ -1,0 +1,22 @@
+[
+  {"query": "我家孩子是华师一附中的,高三模考 615 分物理类,选科物化生,接下来该怎么规划啊,想读个好点的工科专业", "should_trigger": true},
+  {"query": "湖北 2025 物理类 575 分能上什么学校啊,我家是宜昌的,孩子选的物化政", "should_trigger": true},
+  {"query": "中南财经政法和武汉大学法学哪个好,孩子湖北的,想做律师", "should_trigger": true},
+  {"query": "湖北 3+1+2 高考,首选物理再选化学和生物这种组合能报哪些专业,以后好就业吗", "should_trigger": true},
+  {"query": "孩子高考估分 605,武汉本地的,想留武汉读书,父母都是体制内,推荐几所学校呗", "should_trigger": true},
+  {"query": "我儿子高考成绩 580 物理类,湖北的,想报华科或者武大但分数差点,有什么备选", "should_trigger": true},
+  {"query": "孩子 580 分湖北物理类,普通工薪家庭独子,父母希望考公,选什么专业最稳", "should_trigger": true},
+  {"query": "湖北历史类 600 分女生,想做老师,公费师范生华师靠谱吗", "should_trigger": true},
+  {"query": "湖北物理类 540 分能报哪些性价比高的学校,听说有些冷门专业其实不错", "should_trigger": true},
+  {"query": "湖北家长群在讨论说三峡大学的电气专业进国家电网超容易,这是真的吗", "should_trigger": true},
+  {"query": "河南高考 580 分能上什么学校,理科生想学计算机", "should_trigger": false},
+  {"query": "我家孩子刚考完研究生初试,400 分能上哪所 985 的计算机专业", "should_trigger": false},
+  {"query": "高一选科有什么建议,我们是上海的孩子,想未来学医", "should_trigger": false},
+  {"query": "美国 SAT 1500 分能申请哪些常春藤大学", "should_trigger": false},
+  {"query": "湖北高考 2026 年报名时间是几月,在哪报名", "should_trigger": false},
+  {"query": "湖北哪个大学校园风景好适合周末游玩", "should_trigger": false},
+  {"query": "孩子准备出国留学申请 UCLA,GPA 3.5 怎么准备文书", "should_trigger": false},
+  {"query": "我侄子湖北上大学大三了想问问考研选什么专业方向好", "should_trigger": false},
+  {"query": "湖北高考志愿填报指导机构哪家性价比高,想给孩子报一个", "should_trigger": false},
+  {"query": "湖北高三冲刺补习班哪家好,孩子数学物理薄弱", "should_trigger": false}
+]
