@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from lib import DATA_DIR, get_db
+from lib import DATA_DIR, classify_score, get_db
 
 YIFEN_DIR = DATA_DIR / "yifenduyiduan"
 
@@ -246,6 +246,8 @@ def estimate(
         result = score_to_rank_official(score, subject_type, year)
         if result is None:
             result = score_to_rank_fallback(score, subject_type, year)
+        # 附加批次分类(用于产品分流:本科 / 专科 / 复读)
+        result["batch"] = classify_score(score, subject_type, year)
         return result
     else:  # rank
         result = rank_to_score_official(rank, subject_type, year)
@@ -279,6 +281,16 @@ def fmt_human(result: dict) -> str:
         )
     out.append(f"  方法:{result['method']}({result.get('precision', '?')})")
     out.append(f"  说明:{result['note']}")
+    batch = result.get("batch")
+    if batch and batch.get("bracket") != "unknown":
+        out.append(f"  批次:{batch['label']}")
+        action_msg = {
+            "main_skill": "→ 走主流程(本科填报 5 推荐 + 3 避坑)",
+            "fork_repeat_or_vocational": "→ 触发分流:复读 vs 专科填报二选一",
+            "suggest_repeat_or_alternative": "→ 建议复读 / 单招 / 自考(常规志愿不适用)",
+        }.get(batch.get("action"), "")
+        if action_msg:
+            out.append(f"  分流:{action_msg}")
     return "\n".join(out)
 
 

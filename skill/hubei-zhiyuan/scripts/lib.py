@@ -218,6 +218,92 @@ def compute_risk(history_ranks):
     }
 
 
+_BATCH_LINES_CACHE = None
+
+
+def load_batch_lines():
+    """加载 data/batch_lines/hubei.csv,返回 [{年份, 科类, 批次, 分数, 位次}, ...]"""
+    global _BATCH_LINES_CACHE
+    if _BATCH_LINES_CACHE is not None:
+        return _BATCH_LINES_CACHE
+    import csv as _csv
+    path = DATA_DIR / "batch_lines" / "hubei.csv"
+    if not path.exists():
+        _BATCH_LINES_CACHE = []
+        return []
+    rows = []
+    with path.open() as f:
+        for r in _csv.DictReader(f):
+            try:
+                rows.append({
+                    "year": int(r["年份"]),
+                    "subject_type": r["科类"],
+                    "batch": r["批次"],
+                    "score": int(r["控制线分数"]),
+                    "rank": int(r["对应位次"]) if r["对应位次"] != "N/A" else None,
+                })
+            except (ValueError, KeyError):
+                continue
+    _BATCH_LINES_CACHE = rows
+    return rows
+
+
+def classify_score(score: int, subject_type: str, year: int):
+    """给定分数 + 科类 + 年份,判断处于哪个批次档位。
+
+    Returns dict:
+        bracket: "above_special" / "between_special_and_undergrad" / "above_undergrad" /
+                 "between_undergrad_and_vocational" / "below_vocational"
+        label:   人类可读标签
+        action:  推荐的产品分流(走主 skill / 走专科 skill / 建议复读)
+        nearby_lines: 附近批次线
+    """
+    lines = load_batch_lines()
+    by_batch = {
+        r["batch"]: r for r in lines
+        if r["year"] == year and r["subject_type"] == subject_type
+    }
+    undergrad = by_batch.get("本科批")
+    special = by_batch.get("本科特控线")
+    vocational = by_batch.get("专科批")
+
+    if not undergrad:
+        return {
+            "bracket": "unknown",
+            "label": "无该年批次线数据",
+            "action": "default",
+            "nearby_lines": [],
+        }
+
+    if special and score >= special["score"]:
+        return {
+            "bracket": "above_special",
+            "label": f"本科特控线以上(强基/综合评价/特殊类型可报)",
+            "action": "main_skill",
+            "nearby_lines": [special, undergrad],
+        }
+    if score >= undergrad["score"]:
+        return {
+            "bracket": "above_undergrad",
+            "label": "本科批",
+            "action": "main_skill",
+            "nearby_lines": [undergrad] + ([special] if special else []),
+        }
+    if vocational and score >= vocational["score"]:
+        return {
+            "bracket": "between_undergrad_and_vocational",
+            "label": f"本科线下 / 专科线上(差本科线 {undergrad['score'] - score} 分)",
+            "action": "fork_repeat_or_vocational",
+            "nearby_lines": [undergrad, vocational],
+        }
+    return {
+        "bracket": "below_vocational",
+        "label": f"专科线下(差专科线 {(vocational['score'] if vocational else 200) - score} 分)",
+        "action": "suggest_repeat_or_alternative",
+        "nearby_lines": [vocational] if vocational else [],
+    }
+
+
 def get_history_ranks(conn, school_id: int, type_id: str, special_group: str = None, min_year: int = 2023):
     """从 province_scores 拉历年最低位次序列,按年份升序返回 [(year, rank), ...]。
 
