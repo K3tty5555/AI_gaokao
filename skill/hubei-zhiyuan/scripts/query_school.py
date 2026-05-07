@@ -29,7 +29,9 @@ import sys
 from typing import Optional
 
 from lib import (
+    compute_risk,
     get_db,
+    get_history_ranks,
     matches_sg_info,
     parse_combo,
     school_attrs,
@@ -73,6 +75,7 @@ def query(
         SELECT
             ps.school_id,
             ps.year,
+            ps.type_id,
             ps.special_group,
             ps.sg_name,
             ps.sg_info,
@@ -136,6 +139,10 @@ def query(
         if not matches_sg_info(r["sg_info"], user_subjects):
             continue
         s = r["section_int"]
+        # 大小年风险评估:用学校粒度(该校该科类历年最低位次,口径稳定)
+        # 而非专业组粒度(组编号每年变,数据基本拿不到 ≥2 年)
+        history = get_history_ranks(conn, r["school_id"], str(r["type_id"]))
+        risk = compute_risk(history)
         item = {
             "school_id": r["school_id"],
             "school_name": r["school_name"],
@@ -155,6 +162,8 @@ def query(
             "filing": r["filing"],
             "proscore": r["proscore"],
             "diff": r["diff"],
+            "history_ranks": [{"year": y, "rank": rk} for y, rk in history],
+            "risk": risk,
         }
         if chong_min <= s < chong_max:
             chong.append(item)
@@ -229,6 +238,15 @@ def fmt_human(result: dict) -> str:
                 f"    {it['year']} 录取 位次 {it['min_section']} 分 {it['min_score']}"
                 f"  | {it['sg_info']}"
             )
+            risk = it.get("risk") or {}
+            risk_label = {
+                "stable": "[稳]",
+                "low_risk": "[稳]",
+                "moderate": "[中风险]",
+                "high_risk": "[高风险]",
+                "unknown": "[未知]",
+            }.get(risk.get("level", "unknown"), "[未知]")
+            out.append(f"    {risk_label} 大小年:{risk.get('note', '-')}")
         out.append("")
     return "\n".join(out)
 

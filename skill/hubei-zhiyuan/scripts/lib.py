@@ -146,6 +146,120 @@ def school_attrs(conn, school_id: int) -> Optional[sqlite3.Row]:
     ).fetchone()
 
 
+def compute_risk(history_ranks):
+    """
+    给一个 (school_id, special_group, type_id) 历年最低位次序列(按年份升序),
+    计算大小年风险标签。
+
+    Args:
+        history_ranks: 列表,如 [(year, rank), ...] 按年份升序
+
+    Returns:
+        dict: {
+            "level": stable / low_risk / moderate / high_risk / unknown,
+            "cv": 变异系数,
+            "mean": 历年均值位次,
+            "std": 标准差,
+            "trend": rising_score / dropping_score / stable,
+            "note": 一句话解读(给用户看)
+        }
+    """
+    ranks = [r for _, r in history_ranks if r is not None and r > 0]
+    if len(ranks) < 2:
+        return {
+            "level": "unknown",
+            "cv": None,
+            "mean": ranks[0] if ranks else None,
+            "std": None,
+            "trend": "unknown",
+            "note": "近 3 年数据不足,无法判断大小年",
+        }
+
+    mean = sum(ranks) / len(ranks)
+    variance = sum((r - mean) ** 2 for r in ranks) / len(ranks)
+    std = variance ** 0.5
+    cv = std / mean if mean > 0 else 0
+
+    # 风险等级阈值
+    if cv < 0.05:
+        level = "stable"
+        note_base = "近年录取位次稳定"
+    elif cv < 0.10:
+        level = "low_risk"
+        note_base = f"位次有小波动 (±{int(std)} 名)"
+    elif cv < 0.20:
+        level = "moderate"
+        note_base = f"位次波动 (±{int(std)} 名),有大小年苗头"
+    else:
+        level = "high_risk"
+        note_base = f"近年位次波动极大 (±{int(std)} 名),典型大小年"
+
+    # 趋势(最近 vs 最早)
+    first_r = ranks[0]
+    last_r = ranks[-1]
+    trend = "stable"
+    trend_note = ""
+    if len(ranks) >= 2 and first_r > 0:
+        change = (first_r - last_r) / first_r  # >0 = 位次更靠前 = 分数涨
+        if change > 0.15:
+            trend = "rising_score"
+            trend_note = ";最近一年位次猛涨(分数飙升,**今年可能继续涨,慎重冲档**)"
+        elif change < -0.15:
+            trend = "dropping_score"
+            trend_note = ";最近一年位次回落(分数下滑,**今年可能反弹,稳档可考虑**)"
+
+    return {
+        "level": level,
+        "cv": round(cv, 3),
+        "mean": int(mean),
+        "std": int(std),
+        "trend": trend,
+        "note": note_base + trend_note,
+    }
+
+
+def get_history_ranks(conn, school_id: int, type_id: str, special_group: str = None, min_year: int = 2023):
+    """从 province_scores 拉历年最低位次序列,按年份升序返回 [(year, rank), ...]。
+
+    粒度选择:
+    - 如果指定 special_group:返回该专业组的历年位次(精细但通常拿不到 ≥2 年,因为组号每年变)
+    - 不指定 special_group:返回 (school_id, type_id) 的"年度最低位次"
+      = 每年该校该科类所有专业组中最低的位次 = 该校该科类录取最难的那个组的位次
+      这是稳定可比的口径,**默认推荐用法**
+
+    只看普通类(zslx_name='普通类'),避开国家专项/民族班等特殊类别的位次跳动干扰。
+    """
+    if special_group:
+        rows = conn.execute(
+            """
+            SELECT CAST(year AS INTEGER) AS y, CAST(min_section AS INTEGER) AS r
+            FROM province_scores
+            WHERE school_id=? AND type_id=? AND special_group=?
+              AND CAST(year AS INTEGER) >= ?
+              AND min_section IS NOT NULL AND min_section != '' AND min_section != '-'
+            ORDER BY y ASC
+            """,
+            (school_id, type_id, special_group, min_year),
+        ).fetchall()
+    else:
+        # 学校粒度:每年取该校该科类普通类所有组中最低位次(= 录取最难的组)
+        rows = conn.execute(
+            """
+            SELECT CAST(year AS INTEGER) AS y,
+                   MIN(CAST(min_section AS INTEGER)) AS r
+            FROM province_scores
+            WHERE school_id=? AND type_id=?
+              AND zslx_name = '普通类'
+              AND CAST(year AS INTEGER) >= ?
+              AND min_section IS NOT NULL AND min_section != '' AND min_section != '-'
+            GROUP BY y
+            ORDER BY y ASC
+            """,
+            (school_id, type_id, min_year),
+        ).fetchall()
+    return [(r[0], r[1]) for r in rows if r[1] and r[1] > 0]
+
+
 # === 自测 ===
 if __name__ == "__main__":
     cases = [
