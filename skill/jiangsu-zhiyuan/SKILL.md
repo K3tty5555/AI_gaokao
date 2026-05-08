@@ -401,19 +401,19 @@ references/00_核心方法论/采集_rubric.md
 
 ## 六、工具
 
-⚠️ **跨省调用注意**:scripts 是 _shared 共享的,用 `GAOKAO_PROV=<省>` 环境变量切换数据库。江苏 skill 默认就是 `GAOKAO_PROV=hubei`(也可省略),但为了**显式 + 跨省统一风格**,推荐加上。
+⚠️ **跨省调用注意**:scripts 是 _shared 共享的,用 `GAOKAO_PROV=<省>` 环境变量切换数据库。江苏 skill 默认就是 `GAOKAO_PROV=jiangsu`(也可省略),但为了**显式 + 跨省统一风格**,推荐加上。
 
 ### 召回类
-- `GAOKAO_PROV=hubei scripts/query_school.py --rank N --type 物理类|历史类 --combo 物化生 [--top 50] [--zslx 普通类] [--only-985] [--only-211]`
+- `GAOKAO_PROV=jiangsu scripts/query_school.py --rank N --type 物理类|历史类 --combo 物化生 [--top 50] [--zslx 普通类] [--only-985] [--only-211]`
   按位次区间召回可报院校专业组(冲/稳/保 三档),自动附 risk 标签和历年位次
-- `GAOKAO_PROV=hubei scripts/query_major.py --school <院校名> [--type 物理类|历史类] [--year YYYY] [--zslx 普通类]`
+- `GAOKAO_PROV=jiangsu scripts/query_major.py --school <院校名> [--type 物理类|历史类] [--year YYYY] [--zslx 普通类]`
   查指定院校历年江苏录取(所有专业组)。**注意:参数是 --school 不是 --major**(脚本是按院校查,不是按专业)
 
 ### 预测类
-- `GAOKAO_PROV=hubei scripts/score_to_rank.py --score N --type 物理类|历史类 [--year YYYY] [--json]`
+- `GAOKAO_PROV=jiangsu scripts/score_to_rank.py --score N --type 物理类|历史类 [--year YYYY] [--json]`
   分数 ↔ 位次双向换算(用官方一分一段表,精度 ±0)。也支持 `--rank N` 反查分数。
   输出附 batch.bracket 字段(本科/专科/特控)用于 L1.5 分流
-- `GAOKAO_PROV=hubei scripts/predict.py --scores N1 [N2 N3 ...] --type 物理类|历史类 [--json]`
+- `GAOKAO_PROV=jiangsu scripts/predict.py --scores N1 [N2 N3 ...] --type 物理类|历史类 [--json]`
   **百分点位拟合法**(PM 自创)— 多次模考分预测高考位次。median 主预测 + mean 作波动检测。**L1-A 出分前场景必用**
 
 所有脚本支持 `--json` 输出供 agent 程序化解析。

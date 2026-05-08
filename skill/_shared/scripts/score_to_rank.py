@@ -176,7 +176,22 @@ def rank_to_score_official(rank: int, subject_type: str, year: int) -> Optional[
 def score_to_rank_fallback(score: int, subject_type: str, year: int) -> dict:
     """Fallback:用 province_scores 表的 (min_score, min_section) 锚点做线性插值。
     精度 ±500 名,适用于一分一段表数据不存在的年份/科类。"""
-    type_id = "2073" if subject_type == "物理类" else "2074"
+    # 掌上高考 type_id 映射(各省略有差异,这里覆盖主流):
+    # 2073/1106 物理类, 2074/1107 历史类, 文科 文/理科 综合 用各省 type_id
+    TYPE_ID_MAP = {
+        "物理类": "2073",
+        "历史类": "2074",
+        "理科": "1",
+        "文科": "2",
+        "综合": "3",
+    }
+    type_id = TYPE_ID_MAP.get(subject_type)
+    if type_id is None:
+        return {
+            "score": score, "subject_type": subject_type, "year": year, "rank": None,
+            "method": "fallback_unsupported_type", "precision": "无法估算",
+            "note": f"未知科类 {subject_type},无法从 DB fallback",
+        }
     conn = get_db()
 
     rows = conn.execute(
@@ -341,7 +356,12 @@ def main() -> int:
     grp = p.add_mutually_exclusive_group(required=True)
     grp.add_argument("--score", type=int, help="高考分数 → 查位次")
     grp.add_argument("--rank", type=int, help="位次 → 查分数")
-    p.add_argument("--type", choices=["物理类", "历史类"], required=True)
+    p.add_argument(
+        "--type",
+        choices=["物理类", "历史类", "文科", "理科", "综合"],
+        required=True,
+        help="科类:3+1+2 用 物理类/历史类;老高考 用 文科/理科;3+3 用 综合",
+    )
     p.add_argument(
         "--year",
         type=int,
