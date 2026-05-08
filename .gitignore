@@ -1,7 +1,11 @@
 # 爬虫运行时日志(每次跑都会变,不进 git)
-# 支持任意省份:crawl.log / crawl_hunan.log / crawl_jiangsu.log 等
+# 统一写到 logs/ 子目录,根目录 crawl*.log 是历史遗留
+logs/
 crawl*.log
 crawl*.stdout.log
+
+# 临时数据/工作区(skill-creator workspace 单独 commit 进 git,这里不用 ignore)
+# /tmp/ 不在项目根,无需 ignore
 
 # Python
 __pycache__/

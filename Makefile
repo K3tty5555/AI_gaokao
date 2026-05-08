@@ -49,13 +49,14 @@ help:
 .PHONY: crawl
 crawl:
 	@echo "=== 爬 $(PROV) ($(PROV_ZH)) 录取数据,年份 $(YEARS) ==="
+	@mkdir -p logs
 ifeq ($(FG),1)
 	python3 crawl.py --prov $(PROV) --years $(YEARS)
 else
-	@echo "(后台模式,日志写到 crawl_$(PROV).stdout.log)"
-	@nohup python3 -W ignore crawl.py --prov $(PROV) --years $(YEARS) > crawl_$(PROV).stdout.log 2>&1 & \
+	@echo "(后台模式,日志写到 logs/crawl_$(PROV).stdout.log)"
+	@nohup python3 -W ignore crawl.py --prov $(PROV) --years $(YEARS) > logs/crawl_$(PROV).stdout.log 2>&1 & \
 		echo "PID=$$!"
-	@echo "查看进度:tail -f crawl_$(PROV).stdout.log"
+	@echo "查看进度:tail -f logs/crawl_$(PROV).stdout.log"
 endif
 
 

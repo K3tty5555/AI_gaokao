@@ -323,7 +323,9 @@ def main() -> int:
         YEARS = [int(y) for y in args.years.split(",")]
 
     DB_PATH = ROOT / "data" / f"gaokao_{PROV_NAME}_{_date.today().year}.db"
-    LOG_PATH = ROOT / f"crawl_{PROV_NAME}.log"
+    log_dir = ROOT / "logs"
+    log_dir.mkdir(exist_ok=True)
+    LOG_PATH = log_dir / f"crawl_{PROV_NAME}.log"
 
     log(f"=== 爬取 {PROV_NAME} (prov_id={PROV_ID}) 年份 {YEARS} ===")
     log(f"DB={DB_PATH}")
