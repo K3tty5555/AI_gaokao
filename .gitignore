@@ -22,6 +22,9 @@ Thumbs.db
 .idea/
 *.swp
 
+# Agent 临时产物(playwright/claude-code 子任务的临时文件,不进 git)
+.playwright-mcp/
+
 # 数据库:.db 文件已通过 .gitattributes 标为 binary,
 # 本项目主动把 data/gaokao_hubei.db 提交进 git(便于 clone 即用),
 # 所以这里不忽略 .db。
