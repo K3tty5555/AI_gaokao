@@ -1,35 +1,41 @@
-"""共享:DB 连接 + 选科组合解析 + sg_info 匹配"""
+"""共享:DB 连接 + 选科组合解析 + sg_info 匹配 (跨省通用)"""
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from pathlib import Path
 from typing import Optional
 
 # 数据目录:项目根/data/
-# 路径推导:scripts → hubei-zhiyuan → skill → 项目根 → data/
+# 路径推导:scripts → _shared → skill → 项目根 → data/
 DATA_DIR = (
     Path(__file__).resolve().parent.parent.parent.parent / "data"
 )
 
 
-def _latest_db() -> Path:
-    """自动找 data/ 里最新的 gaokao_hubei_<YYYY>.db。
-    支持按年份归档:多个年份共存时取年份最大的。"""
-    candidates = sorted(DATA_DIR.glob("gaokao_hubei_*.db"))
-    # 兜底:旧版无年份后缀的文件名
-    legacy = DATA_DIR / "gaokao_hubei.db"
+def _latest_db(prov: str = "hubei") -> Path:
+    """自动找 data/ 里某省最新的 gaokao_<prov>_<YYYY>.db。
+
+    支持按年份归档:多个年份共存时取年份最大的。
+    """
+    candidates = sorted(DATA_DIR.glob(f"gaokao_{prov}_*.db"))
+    # 兜底:旧版无年份后缀的文件名(早期湖北版)
+    legacy = DATA_DIR / f"gaokao_{prov}.db"
     if legacy.exists():
         candidates.append(legacy)
     if not candidates:
         raise FileNotFoundError(
-            f"未找到数据库文件。预期路径:{DATA_DIR}/gaokao_hubei_<YYYY>.db。"
-            f"运行 `python3 crawl.py` 爬取数据。"
+            f"未找到 {prov} 数据库文件。预期路径:{DATA_DIR}/gaokao_{prov}_<YYYY>.db。"
+            f"运行 `python3 crawl.py --prov {prov}` 爬取数据。"
         )
     return candidates[-1]
 
 
-DB_PATH = _latest_db()
+# 默认省份从环境变量读取(每省 skill 在调用 scripts 前设 GAOKAO_PROV=hunan 等)
+# 默认 hubei 保持向后兼容
+PROVINCE = os.environ.get("GAOKAO_PROV", "hubei")
+DB_PATH = _latest_db(PROVINCE)
 
 # 单字符 → 全名(用户输入"物化生"等)
 SUBJECT_MAP = {

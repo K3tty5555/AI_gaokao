@@ -1,6 +1,7 @@
 # 爬虫运行时日志(每次跑都会变,不进 git)
-crawl.log
-crawl.stdout.log
+# 支持任意省份:crawl.log / crawl_hunan.log / crawl_jiangsu.log 等
+crawl*.log
+crawl*.stdout.log
 
 # Python
 __pycache__/

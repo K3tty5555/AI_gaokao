@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-分数 ↔ 位次 双向换算 (基于湖北招办官方一分一段表)。
+分数 ↔ 位次 双向换算 (基于各省招办官方一分一段表,跨省通用)。
 
 数据源优先级:
 1. data/yifenduyiduan/<year>_<物理类|历史类>.csv   ← 优先,精度 ±0
@@ -27,19 +27,32 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from lib import DATA_DIR, classify_score, get_db
+from lib import DATA_DIR, PROVINCE, classify_score, get_db
 
 YIFEN_DIR = DATA_DIR / "yifenduyiduan"
 
 
-def _load_yifenduan(year: int, subject_type: str) -> Optional[list[tuple[int, int, int]]]:
+def _load_yifenduan(
+    year: int, subject_type: str, prov: str = None
+) -> Optional[list[tuple[int, int, int]]]:
     """加载某年某科类的一分一段表。返回 [(分数, 本段人数, 累计人数), ...] 按分数降序。
 
-    返回 None 表示数据文件不存在(需 fallback)。
+    文件命名约定:`{年}_{科类}_{省份}.csv`(如 2024_物理类_hubei.csv)。
+    Fallback:无省份后缀(早期湖北版),仅在 prov=hubei 时启用,保证向后兼容。
     """
-    path = YIFEN_DIR / f"{year}_{subject_type}.csv"
+    if prov is None:
+        prov = PROVINCE
+    path = YIFEN_DIR / f"{year}_{subject_type}_{prov}.csv"
     if not path.exists():
-        return None
+        # 向后兼容:湖北早期文件无 _hubei 后缀
+        if prov == "hubei":
+            legacy = YIFEN_DIR / f"{year}_{subject_type}.csv"
+            if legacy.exists():
+                path = legacy
+            else:
+                return None
+        else:
+            return None
     rows = []
     with path.open() as f:
         reader = csv.DictReader(f)
@@ -55,17 +68,32 @@ def _load_yifenduan(year: int, subject_type: str) -> Optional[list[tuple[int, in
     return rows
 
 
-def _latest_yifenduan_year(subject_type: str) -> Optional[int]:
-    """找该科类有数据的最新年份"""
+def _latest_yifenduan_year(subject_type: str, prov: str = None) -> Optional[int]:
+    """找该省该科类有数据的最新年份"""
+    if prov is None:
+        prov = PROVINCE
     if not YIFEN_DIR.exists():
         return None
     years = []
-    for p in YIFEN_DIR.glob(f"*_{subject_type}.csv"):
+    # 优先匹配省份后缀
+    for p in YIFEN_DIR.glob(f"*_{subject_type}_{prov}.csv"):
         try:
             year = int(p.stem.split("_")[0])
             years.append(year)
         except ValueError:
             continue
+    # 向后兼容:湖北早期无后缀
+    if not years and prov == "hubei":
+        for p in YIFEN_DIR.glob(f"*_{subject_type}.csv"):
+            stem = p.stem
+            # 排除 *_<otherprov> 类(如 _hunan)
+            if "_" in stem.replace(f"_{subject_type}", "", 1):
+                continue
+            try:
+                year = int(stem.split("_")[0])
+                years.append(year)
+            except ValueError:
+                continue
     return max(years) if years else None
 
 
@@ -307,7 +335,9 @@ def fmt_human(result: dict) -> str:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="分数 ↔ 位次 双向换算(湖北一分一段表优先)")
+    p = argparse.ArgumentParser(
+        description="分数 ↔ 位次 双向换算(用 GAOKAO_PROV 切换省份,默认 hubei)"
+    )
     grp = p.add_mutually_exclusive_group(required=True)
     grp.add_argument("--score", type=int, help="高考分数 → 查位次")
     grp.add_argument("--rank", type=int, help="位次 → 查分数")

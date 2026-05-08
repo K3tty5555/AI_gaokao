@@ -1,38 +1,52 @@
 #!/usr/bin/env python3
 """
-掌上高考 - 湖北 录取数据爬取
+掌上高考 - 录取数据爬取(参数化省份)
 - 数据源: static-data.gaokao.cn (静态 JSON, 无鉴权)
-- 范围:   湖北 (prov_id=42), 2021-2025
+- 用法:   python3 crawl.py --prov hubei [--years 2021-2025]
 - 节奏:   每请求间隔 ~1 秒
-- 存储:   SQLite (gaokao_hubei.db)
+- 存储:   SQLite (data/gaokao_<prov>_<当前年>.db)
 - 断点续:从 fetch_log 跳过已抓 URL
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sqlite3
 import sys
 import time
+from datetime import date as _date
 from pathlib import Path
 from typing import Optional
 
 import requests
 
 ROOT = Path(__file__).resolve().parent
-# 默认按爬取年份归档:data/gaokao_hubei_<当前年>.db
-# 多次爬取同一年会断点续传(从 fetch_log 跳过已抓 URL)
-from datetime import date as _date
 
-DB_PATH = ROOT / "data" / f"gaokao_hubei_{_date.today().year}.db"
-LOG_PATH = ROOT / "crawl.log"
+# prov 拼音名 → prov_id (掌上高考用的)
+# 完整 31 省映射,后续扩展用
+PROV_MAP = {
+    "beijing": 11, "tianjin": 12, "hebei": 13, "shanxi": 14, "neimenggu": 15,
+    "liaoning": 21, "jilin": 22, "heilongjiang": 23,
+    "shanghai": 31, "jiangsu": 32, "zhejiang": 33, "anhui": 34, "fujian": 35,
+    "jiangxi": 36, "shandong": 37,
+    "henan": 41, "hubei": 42, "hunan": 43, "guangdong": 44, "guangxi": 45,
+    "hainan": 46,
+    "chongqing": 50, "sichuan": 51, "guizhou": 52, "yunnan": 53, "xizang": 54,
+    "shaanxi": 61, "gansu": 62, "qinghai": 63, "ningxia": 64, "xinjiang": 65,
+}
 
 UA = "Mozilla/5.0 (compatible; gaokao-research/0.1; +personal-use)"
 HEADERS = {"User-Agent": UA, "Accept": "application/json"}
-PROV_ID = 42  # 湖北
-YEARS = [2021, 2022, 2023, 2024, 2025]
 SLEEP = 1.0
 TIMEOUT = 15
+
+# 默认全局变量(由 main() 设置)
+PROV_ID = 42
+PROV_NAME = "hubei"
+YEARS = [2021, 2022, 2023, 2024, 2025]
+DB_PATH = ROOT / "data" / f"gaokao_hubei_{_date.today().year}.db"
+LOG_PATH = ROOT / "crawl.log"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS schools (
@@ -283,6 +297,35 @@ def fetch_province_score(conn, sid: int, year: int) -> int:
 
 
 def main() -> int:
+    global PROV_ID, PROV_NAME, DB_PATH, LOG_PATH
+
+    p = argparse.ArgumentParser(description="掌上高考 - 录取数据爬取(参数化省份)")
+    p.add_argument(
+        "--prov",
+        default="hubei",
+        choices=sorted(PROV_MAP.keys()),
+        help="省份拼音名(默认 hubei)。31 省全覆盖。",
+    )
+    p.add_argument(
+        "--years",
+        default="2021-2025",
+        help="年份范围(默认 2021-2025)。例:'2021-2025' 或 '2024,2025'",
+    )
+    args = p.parse_args()
+
+    PROV_NAME = args.prov
+    PROV_ID = PROV_MAP[PROV_NAME]
+    if "-" in args.years:
+        a, b = args.years.split("-")
+        global YEARS
+        YEARS = list(range(int(a), int(b) + 1))
+    else:
+        YEARS = [int(y) for y in args.years.split(",")]
+
+    DB_PATH = ROOT / "data" / f"gaokao_{PROV_NAME}_{_date.today().year}.db"
+    LOG_PATH = ROOT / f"crawl_{PROV_NAME}.log"
+
+    log(f"=== 爬取 {PROV_NAME} (prov_id={PROV_ID}) 年份 {YEARS} ===")
     log(f"DB={DB_PATH}")
     conn = init_db()
 

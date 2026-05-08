@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from lib import DATA_DIR, classify_score
+from lib import DATA_DIR, PROVINCE, classify_score
 
 
 def _median(lst: List[float]) -> float:
@@ -42,22 +42,49 @@ def _mean(lst: List[float]) -> float:
     return sum(lst) / len(lst) if lst else 0
 
 
-def _find_latest_year(subject_type: str) -> Optional[int]:
-    """找一分一段表里最新可用年份"""
+def _yifen_path(year: int, subject_type: str, prov: str = None) -> Path:
+    """文件命名约定 `{年}_{科类}_{省份}.csv`,fallback 湖北无后缀。"""
+    if prov is None:
+        prov = PROVINCE
+    p = DATA_DIR / "yifenduyiduan" / f"{year}_{subject_type}_{prov}.csv"
+    if p.exists():
+        return p
+    if prov == "hubei":
+        legacy = DATA_DIR / "yifenduyiduan" / f"{year}_{subject_type}.csv"
+        if legacy.exists():
+            return legacy
+    return p  # 不存在也返回主路径,让调用方处理 not found
+
+
+def _find_latest_year(subject_type: str, prov: str = None) -> Optional[int]:
+    """找一分一段表里最新可用年份(优先省份后缀,fallback 湖北无后缀)"""
+    if prov is None:
+        prov = PROVINCE
     yifen_dir = DATA_DIR / "yifenduyiduan"
     years = []
-    for p in yifen_dir.glob(f"*_{subject_type}.csv"):
+    for p in yifen_dir.glob(f"*_{subject_type}_{prov}.csv"):
         try:
             year = int(p.stem.split("_")[0])
             years.append(year)
         except ValueError:
             continue
+    if not years and prov == "hubei":
+        for p in yifen_dir.glob(f"*_{subject_type}.csv"):
+            stem = p.stem
+            # 排除 *_<otherprov>.csv
+            if "_" in stem.replace(f"_{subject_type}", "", 1):
+                continue
+            try:
+                year = int(stem.split("_")[0])
+                years.append(year)
+            except ValueError:
+                continue
     return max(years) if years else None
 
 
 def _score_to_rank(score: int, subject_type: str, year: int):
     """简单查一分一段表(预测专用,不走 score_to_rank.py 完整流程)"""
-    path = DATA_DIR / "yifenduyiduan" / f"{year}_{subject_type}.csv"
+    path = _yifen_path(year, subject_type)
     if not path.exists():
         return None, None
     rows = []
@@ -163,7 +190,7 @@ def fmt_human(r: dict) -> str:
     if r['warning']:
         out.append(f"  注意  :{r['warning']}")
     out.append("")
-    out.append(f"基准年:{r['base_year']} 年湖北 {r['subject_type']} 一分一段表")
+    out.append(f"基准年:{r['base_year']} 年 {PROVINCE} {r['subject_type']} 一分一段表")
     if r['predicted_rank_median']:
         out.append(
             f"  → 中位分 {r['median_score']} 对应位次:{r['predicted_rank_median']:,}"
