@@ -224,44 +224,138 @@ def compute_risk(history_ranks):
     }
 
 
-_BATCH_LINES_CACHE = None
+def compute_admission_probability(user_rank: int, history_ranks: list) -> dict:
+    """
+    计算用户被录取的概率（滑档概率的补集）。
+
+    Args:
+        user_rank: 用户全省位次（数字越小越靠前）
+        history_ranks: [(year, min_section), ...]，min_section 是该校该年录取最低位次
+
+    Returns:
+        dict: {
+            "probability": float 0-1 或 None,
+            "display": 给用户看的字符串,
+            "label": 安全/较稳/有风险/高风险/未知,
+            "mean_rank": 历年均值位次,
+            "std_rank": 标准差,
+        }
+    """
+    from math import erf, sqrt
+
+    ranks = [r for _, r in history_ranks if r is not None and r > 0]
+
+    if len(ranks) < 2:
+        return {
+            "probability": None,
+            "display": "数据不足",
+            "label": "未知",
+            "mean_rank": ranks[0] if ranks else None,
+            "std_rank": None,
+        }
+
+    mean = sum(ranks) / len(ranks)
+    variance = sum((r - mean) ** 2 for r in ranks) / len(ranks)
+    std = variance ** 0.5
+
+    if std == 0:
+        prob = 0.95 if user_rank <= mean else 0.05
+    else:
+        # P(min_section >= user_rank) = 1 - Φ((user_rank - mean) / std)
+        # 手动实现标准正态 CDF: Φ(x) = (1 + erf(x / sqrt(2))) / 2
+        z = (user_rank - mean) / std
+        phi = (1.0 + erf(z / sqrt(2.0))) / 2.0
+        prob = 1.0 - phi
+
+    # clamp to [0.05, 0.95]
+    prob = max(0.05, min(0.95, prob))
+
+    if prob >= 0.85:
+        label = "安全"
+    elif prob >= 0.65:
+        label = "较稳"
+    elif prob >= 0.35:
+        label = "有风险"
+    else:
+        label = "高风险"
+
+    return {
+        "probability": round(prob, 4),
+        "display": f"{int(round(prob * 100))}%",
+        "label": label,
+        "mean_rank": int(mean),
+        "std_rank": int(std),
+    }
+
+
+_BATCH_LINES_CACHE: dict = {}
 
 
 def load_batch_lines():
-    """加载 data/batch_lines/hubei.csv,返回 [{年份, 科类, 批次, 分数, 位次}, ...]"""
+    """加载 data/batch_lines/{PROVINCE}.csv,返回 [{年份, 科类, 批次, 分数, 位次}, ...]"""
     global _BATCH_LINES_CACHE
-    if _BATCH_LINES_CACHE is not None:
-        return _BATCH_LINES_CACHE
+    if PROVINCE in _BATCH_LINES_CACHE:
+        return _BATCH_LINES_CACHE[PROVINCE]
     import csv as _csv
-    path = DATA_DIR / "batch_lines" / "hubei.csv"
+    path = DATA_DIR / "batch_lines" / f"{PROVINCE}.csv"
     if not path.exists():
-        _BATCH_LINES_CACHE = []
+        _BATCH_LINES_CACHE[PROVINCE] = []
         return []
     rows = []
     with path.open() as f:
         for r in _csv.DictReader(f):
+            if r.get("年份", "").startswith("#"):
+                continue
             try:
-                rows.append({
-                    "year": int(r["年份"]),
-                    "subject_type": r["科类"],
-                    "batch": r["批次"],
-                    "score": int(r["控制线分数"]),
-                    "rank": int(r["对应位次"]) if r["对应位次"] != "N/A" else None,
-                })
+                year = int(r["年份"])
+                score = int(r["控制线分数"])
             except (ValueError, KeyError):
                 continue
-    _BATCH_LINES_CACHE = rows
+            rank_raw = r.get("对应位次", "").strip()
+            try:
+                rank = int(rank_raw) if rank_raw and rank_raw not in ("N/A", "-", "") else None
+            except ValueError:
+                rank = None
+            rows.append({
+                "year": year,
+                "subject_type": r.get("科类", ""),
+                "batch": r.get("批次", ""),
+                "score": score,
+                "rank": rank,
+            })
+    _BATCH_LINES_CACHE[PROVINCE] = rows
     return rows
+
+
+# 批次名别名表 — 覆盖 3+1+2 / 3+3 / 老高考 三种体系
+# special_aliases:  强基/综评线，高于普通本科
+# undergrad_aliases: 普通本科线
+# vocational_aliases: 专科线
+_SPECIAL_ALIASES = {"本科特控线", "特殊类型招生控制线", "特控线", "特殊类型", "一本"}
+_UNDERGRAD_ALIASES = {"本科批", "普通类一段", "二本"}
+_VOCATIONAL_ALIASES = {"专科批", "普通类二段", "专科"}
+
+
+def _pick_batch(by_batch: dict, aliases: set) -> Optional[dict]:
+    for name in aliases:
+        if name in by_batch:
+            return by_batch[name]
+    return None
 
 
 def classify_score(score: int, subject_type: str, year: int):
     """给定分数 + 科类 + 年份,判断处于哪个批次档位。
 
+    兼容三种体系：
+      3+1+2:  本科批 / 本科特控线 / 专科批
+      3+3:    普通类一段 / 特殊类型招生控制线 / 普通类二段
+      老高考:  二本(本科线) / 一本(重点线) / 专科
+
     Returns dict:
-        bracket: "above_special" / "between_special_and_undergrad" / "above_undergrad" /
+        bracket: "above_special" / "above_undergrad" /
                  "between_undergrad_and_vocational" / "below_vocational"
         label:   人类可读标签
-        action:  推荐的产品分流(走主 skill / 走专科 skill / 建议复读)
+        action:  推荐的产品分流
         nearby_lines: 附近批次线
     """
     lines = load_batch_lines()
@@ -269,9 +363,10 @@ def classify_score(score: int, subject_type: str, year: int):
         r["batch"]: r for r in lines
         if r["year"] == year and r["subject_type"] == subject_type
     }
-    undergrad = by_batch.get("本科批")
-    special = by_batch.get("本科特控线")
-    vocational = by_batch.get("专科批")
+
+    undergrad = _pick_batch(by_batch, _UNDERGRAD_ALIASES)
+    special   = _pick_batch(by_batch, _SPECIAL_ALIASES)
+    vocational = _pick_batch(by_batch, _VOCATIONAL_ALIASES)
 
     if not undergrad:
         return {
@@ -284,33 +379,34 @@ def classify_score(score: int, subject_type: str, year: int):
     if special and score >= special["score"]:
         return {
             "bracket": "above_special",
-            "label": f"本科特控线以上(强基/综合评价/特殊类型可报)",
+            "label": f"{special['batch']}以上(强基/综合评价/特殊类型可报)",
             "action": "main_skill",
             "nearby_lines": [special, undergrad],
         }
     if score >= undergrad["score"]:
         return {
             "bracket": "above_undergrad",
-            "label": "本科批",
+            "label": undergrad["batch"],
             "action": "main_skill",
             "nearby_lines": [undergrad] + ([special] if special else []),
         }
     if vocational and score >= vocational["score"]:
         return {
             "bracket": "between_undergrad_and_vocational",
-            "label": f"本科线下 / 专科线上(差本科线 {undergrad['score'] - score} 分)",
+            "label": f"{undergrad['batch']}线下 / {vocational['batch']}线上(差{undergrad['score'] - score}分)",
             "action": "fork_repeat_or_vocational",
             "nearby_lines": [undergrad, vocational],
         }
     return {
         "bracket": "below_vocational",
-        "label": f"专科线下(差专科线 {(vocational['score'] if vocational else 200) - score} 分)",
+        "label": f"{vocational['batch'] if vocational else '专科'}线下",
         "action": "suggest_repeat_or_alternative",
         "nearby_lines": [vocational] if vocational else [],
     }
 
 
-def get_history_ranks(conn, school_id: int, type_id: str, special_group: str = None, min_year: int = 2023):
+def get_history_ranks(conn, school_id: int, type_id: str, special_group: str = None,
+                      min_year: int = 2023, extra_type_id: str = None):
     """从 province_scores 拉历年最低位次序列,按年份升序返回 [(year, rank), ...]。
 
     粒度选择:
@@ -321,33 +417,37 @@ def get_history_ranks(conn, school_id: int, type_id: str, special_group: str = N
 
     只看普通类(zslx_name='普通类'),避开国家专项/民族班等特殊类别的位次跳动干扰。
     """
+    type_ids = [type_id]
+    if extra_type_id and extra_type_id != type_id:
+        type_ids.append(extra_type_id)
+    placeholders = ", ".join("?" * len(type_ids))
+
     if special_group:
         rows = conn.execute(
-            """
+            f"""
             SELECT CAST(year AS INTEGER) AS y, CAST(min_section AS INTEGER) AS r
             FROM province_scores
-            WHERE school_id=? AND type_id=? AND special_group=?
+            WHERE school_id=? AND type_id IN ({placeholders}) AND special_group=?
               AND CAST(year AS INTEGER) >= ?
               AND min_section IS NOT NULL AND min_section != '' AND min_section != '-'
             ORDER BY y ASC
             """,
-            (school_id, type_id, special_group, min_year),
+            (school_id, *type_ids, special_group, min_year),
         ).fetchall()
     else:
-        # 学校粒度:每年取该校该科类普通类所有组中最低位次(= 录取最难的组)
         rows = conn.execute(
-            """
+            f"""
             SELECT CAST(year AS INTEGER) AS y,
                    MIN(CAST(min_section AS INTEGER)) AS r
             FROM province_scores
-            WHERE school_id=? AND type_id=?
+            WHERE school_id=? AND type_id IN ({placeholders})
               AND zslx_name = '普通类'
               AND CAST(year AS INTEGER) >= ?
               AND min_section IS NOT NULL AND min_section != '' AND min_section != '-'
             GROUP BY y
             ORDER BY y ASC
             """,
-            (school_id, type_id, min_year),
+            (school_id, *type_ids, min_year),
         ).fetchall()
     return [(r[0], r[1]) for r in rows if r[1] and r[1] > 0]
 

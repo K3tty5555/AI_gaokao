@@ -1,0 +1,514 @@
+/* Stripe Press 风:超大 serif typography + 奶油底 + asymmetric + 大量留白 + 出版物质感 */
+:root {
+  --ink: oklch(18% 0.02 50);
+  --ink-soft: oklch(38% 0.02 50);
+  --ink-mute: oklch(58% 0.02 50);
+  --paper: oklch(97% 0.012 75);
+  --paper-warm: oklch(94% 0.018 70);
+  --hairline: oklch(85% 0.02 60);
+  --rule: oklch(70% 0.02 50);
+  --accent: oklch(40% 0.13 28);       /* 砖红/赭石 — 类似 Stripe Press 的封面色 */
+  --accent-soft: oklch(75% 0.10 35);
+  --tier-冲: oklch(48% 0.20 28);
+  --tier-稳: oklch(40% 0.10 145);
+  --tier-保: oklch(38% 0.10 240);
+  --tier-避坑: oklch(55% 0.02 50);
+  --warn: oklch(50% 0.18 35);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 17px; }
+body {
+  font-family: "Songti SC", "STSong", "Source Han Serif SC",
+               Georgia, "Times New Roman", serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.75;
+  padding: 80px 40px 48px;
+  max-width: 720px;
+  margin: 0 auto;
+  font-feature-settings: "kern", "liga", "palt";
+  -webkit-font-smoothing: antialiased;
+}
+.serif {
+  font-family: "Songti SC", "STSong", "Source Han Serif SC", Georgia, serif;
+}
+.tabular { font-variant-numeric: tabular-nums; }
+em { font-style: italic; }
+strong { font-weight: 700; }
+
+/* 头版 — 像书封面 */
+header {
+  margin-bottom: 96px;
+  text-align: left;
+}
+.eyebrow {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 32px;
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+.eyebrow > span:not(:last-child)::after {
+  content: "·";
+  margin-left: 14px;
+  color: var(--rule);
+}
+h1 {
+  font-family: "Songti SC", "STSong", Georgia, serif;
+  font-size: 4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--ink);
+  max-width: 8em;
+}
+.deck {
+  margin-top: 32px;
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 1.3rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  max-width: 22em;
+  line-height: 1.5;
+}
+
+section { margin-bottom: 80px; max-width: 60ch; }
+section:has(> .full-list), section:has(.discuss) { max-width: none; }
+h2 {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 28px;
+  font-weight: 600;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+h2::before {
+  content: "";
+  width: 32px;
+  height: 1px;
+  background: var(--accent);
+  display: inline-block;
+}
+h2 .count {
+  color: var(--ink-mute);
+  font-weight: 400;
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  margin-left: auto;
+}
+
+/* 用户画像 — 大字 spotlight */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 32px 48px;
+  margin-bottom: 48px;
+}
+.profile-item .k {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+.profile-item .v {
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 2.4rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1;
+}
+.profile-item.text .v {
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 32px;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  padding: 16px 0;
+}
+.tag {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  padding: 4px 14px;
+  border-right: 1px solid var(--hairline);
+}
+.tag:first-child { padding-left: 0; }
+.tag:last-child { border-right: none; }
+
+.profile-note {
+  margin-top: 24px;
+  padding-left: 28px;
+  border-left: 2px solid var(--warn);
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 1rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+.profile-note::before {
+  content: "校 准  ";
+  font-style: normal;
+  font-family: -apple-system, sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--warn);
+}
+
+/* 核心判断 — 大段 lead paragraph */
+.judgment {
+  font-family: "Songti SC", "STSong", Georgia, serif;
+  font-size: 1.5rem;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  letter-spacing: -0.005em;
+  position: relative;
+  padding-left: 0;
+  margin-top: -8px;
+}
+.judgment::first-letter {
+  font-size: 4em;
+  float: left;
+  line-height: 0.85;
+  margin: 6px 12px -4px 0;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* 推荐 / 避坑 — 章节式,大字章节标题 + 内文 */
+.card {
+  margin-bottom: 80px;
+  position: relative;
+}
+.card-meta-line {
+  display: flex;
+  gap: 18px;
+  align-items: baseline;
+  margin-bottom: 12px;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-weight: 500;
+}
+.tier-label {
+  font-weight: 700;
+  letter-spacing: 0.32em;
+}
+.tier-label.tier-冲 { color: var(--tier-冲); }
+.tier-label.tier-稳 { color: var(--tier-稳); }
+.tier-label.tier-保 { color: var(--tier-保); }
+.tier-label.tier-避坑 { color: var(--tier-避坑); }
+.tier-label::before { content: "—  "; opacity: 0.4; }
+.seq { color: var(--ink-mute); }
+.risk { margin-left: auto; }
+
+.card-title {
+  font-family: "Songti SC", "STSong", Georgia, serif;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.card-subtitle {
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin-bottom: 28px;
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0;
+  margin-bottom: 24px;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--hairline);
+}
+.card-grid > div {
+  padding: 12px 0 12px 0;
+  border-right: 1px solid var(--hairline);
+  padding-right: 16px;
+}
+.card-grid > div:last-child { border-right: none; }
+.card-grid .k {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.card-grid .v {
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 1rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-table {
+  border-collapse: collapse;
+  margin: 24px 0;
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+.history-table th {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-weight: 500;
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  text-align: left;
+  padding: 10px 16px 10px 0;
+  border-bottom: 1px solid var(--ink);
+}
+.history-table th:not(:first-child) { text-align: right; }
+.history-table td {
+  padding: 10px 16px 10px 0;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--ink);
+}
+.history-table td:not(:first-child) { text-align: right; }
+.history-table tr:last-child td { border-bottom: none; }
+
+.risk {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.risk.稳 { color: var(--tier-稳); }
+.risk.中 { color: oklch(50% 0.15 70); }
+.risk.高 { color: var(--tier-冲); }
+
+.reason {
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 1.85;
+  color: var(--ink);
+  white-space: pre-wrap;
+  margin: 24px 0;
+  text-indent: 2em;
+}
+.reason:first-of-type { text-indent: 0; }
+
+.replacement {
+  margin-top: 24px;
+  padding: 20px 28px;
+  background: var(--paper-warm);
+  border: 1px solid var(--accent-soft);
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 1rem;
+  color: var(--ink);
+  font-style: italic;
+}
+.replacement-label {
+  display: block;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-style: normal;
+  font-size: 0.62rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.reminders {
+  list-style: none;
+  margin-top: 24px;
+  border-top: 1px solid var(--hairline);
+  padding-top: 18px;
+}
+.reminders li {
+  font-family: "Songti SC", Georgia, serif;
+  padding: 8px 0 8px 32px;
+  position: relative;
+  font-size: 1rem;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+.reminders li::before {
+  content: "✦";
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  color: var(--accent);
+  font-size: 0.85em;
+}
+
+/* 完整志愿表 */
+.code-warning {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--warn);
+  border-top: 2px solid var(--warn);
+  border-bottom: 2px solid var(--warn);
+  padding: 16px 0;
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+.code-warning b {
+  display: block;
+  font-size: 0.86rem;
+  margin-bottom: 6px;
+  color: var(--ink);
+  letter-spacing: 0.18em;
+}
+.code-warning .normal-text {
+  font-family: "Songti SC", Georgia, serif;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+
+.full-list {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+.full-list th {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  padding: 14px 18px 14px 0;
+  border-bottom: 2px solid var(--ink);
+}
+.full-list td {
+  padding: 14px 18px 14px 0;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--ink);
+  vertical-align: top;
+}
+.full-list tr:last-child td { border-bottom: 1px solid var(--ink); }
+.full-list .num { width: 36px; color: var(--ink-mute); text-align: right; padding-right: 20px; font-style: italic; }
+.full-list .tier-cell {
+  width: 60px;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.full-list .tier-cell.tier-冲 { color: var(--tier-冲); }
+.full-list .tier-cell.tier-稳 { color: var(--tier-稳); }
+.full-list .tier-cell.tier-保 { color: var(--tier-保); }
+.full-list .school { font-weight: 600; }
+.full-list .group { color: var(--ink-soft); font-style: italic; }
+.full-list .rank { text-align: right; font-variant-numeric: tabular-nums; }
+.full-list .blurb {
+  font-family: "Songti SC", Georgia, serif;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* 必聊 — 章节后记 */
+.discuss {
+  list-style: none;
+  counter-reset: item;
+}
+.discuss li {
+  padding: 32px 0;
+  border-top: 1px solid var(--hairline);
+  position: relative;
+  padding-left: 100px;
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 1.15rem;
+  line-height: 1.85;
+  color: var(--ink);
+}
+.discuss li:last-child { border-bottom: 1px solid var(--hairline); }
+.discuss li::before {
+  counter-increment: item;
+  content: counter(item, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 32px;
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 3rem;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1;
+  font-style: italic;
+}
+
+footer {
+  margin-top: 96px;
+  padding-top: 24px;
+  border-top: 1px solid var(--ink);
+  color: var(--ink-mute);
+  font-family: "Songti SC", Georgia, serif;
+  font-size: 0.88rem;
+  font-style: italic;
+  line-height: 1.7;
+}
+footer p { margin-bottom: 6px; }
+footer p:last-child {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-style: normal;
+  font-size: 0.66rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-top: 16px;
+}
+
+@media (max-width: 720px) {
+  body { padding: 40px 22px; max-width: 100%; }
+  h1 { font-size: 2.6rem; }
+  .judgment { font-size: 1.2rem; }
+  .card-title { font-size: 1.5rem; }
+  .reason { font-size: 1rem; }
+  .discuss li { padding-left: 0; padding-top: 60px; }
+  .discuss li::before { top: 16px; font-size: 2rem; }
+}
+
+@media print {
+  body { background: #fff; padding: 24px; max-width: none; }
+  .card { break-inside: avoid; }
+  section { break-inside: avoid; }
+}

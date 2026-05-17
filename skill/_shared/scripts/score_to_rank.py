@@ -58,11 +58,12 @@ def _load_yifenduan(
         reader = csv.DictReader(f)
         for r in reader:
             try:
-                score = int(r["分数"])
-                count = int(r["本段人数"])
-                cum = int(r["累计人数"])
+                # 兼容中文列名（分数/本段人数/累计人数）和英文列名（score/count/cumulative）
+                score = int(r.get("分数") or r.get("score") or "")
+                count = int(r.get("本段人数") or r.get("count") or "0")
+                cum   = int(r.get("累计人数") or r.get("cumulative") or "")
                 rows.append((score, count, cum))
-            except (ValueError, KeyError):
+            except (ValueError, KeyError, TypeError):
                 continue
     rows.sort(key=lambda x: -x[0])  # 分数降序
     return rows

@@ -1,0 +1,548 @@
+/* Bloomberg Wealth Report 风:数据密集 + 大数字 ticker + 高对比 + tabular-nums */
+:root {
+  --ink: oklch(15% 0.02 240);
+  --ink-soft: oklch(35% 0.03 240);
+  --ink-mute: oklch(55% 0.02 240);
+  --paper: oklch(99% 0.003 240);
+  --surface: oklch(96% 0.008 240);
+  --hairline: oklch(85% 0.01 240);
+  --rule: oklch(70% 0.015 240);
+  --line-strong: oklch(20% 0.02 240);
+  --bb-orange: oklch(68% 0.20 50);
+  --bb-amber: oklch(75% 0.16 75);
+  --tier-冲: oklch(52% 0.24 25);
+  --tier-稳: oklch(50% 0.16 145);
+  --tier-保: oklch(48% 0.18 240);
+  --tier-避坑: oklch(45% 0.01 240);
+  --warn: var(--bb-orange);
+  --accent: var(--bb-orange);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: "SF Mono", "JetBrains Mono", "Roboto Mono", ui-monospace,
+               -apple-system, "PingFang SC", "Microsoft YaHei", monospace;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.55;
+  padding: 32px 24px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  font-feature-settings: "tnum", "kern";
+  font-variant-numeric: tabular-nums;
+}
+.serif {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-feature-settings: normal;
+}
+strong { font-weight: 700; }
+em { font-style: normal; color: var(--bb-orange); }
+
+/* 头版 — 黑框 ticker 风 */
+header {
+  border-top: 6px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 18px 0 22px;
+  margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 32px;
+  align-items: end;
+}
+.eyebrow {
+  grid-column: 1 / -1;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.eyebrow > span:first-child {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 3px 8px;
+  letter-spacing: 0.22em;
+}
+.eyebrow > span:not(:first-child):not(:last-child)::after {
+  content: "·";
+  margin-left: 12px;
+  color: var(--rule);
+}
+h1 {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-feature-settings: normal;
+}
+.deck {
+  font-family: "SF Mono", ui-monospace, monospace;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+section { margin-bottom: 36px; }
+h2 {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 16px;
+  font-weight: 700;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+h2 .count {
+  font-size: 0.7rem;
+  color: var(--bb-orange);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  margin-left: auto;
+  font-family: "SF Mono", monospace;
+}
+h2::before {
+  content: "■";
+  color: var(--bb-orange);
+  font-size: 0.7em;
+}
+
+/* 用户画像 — ticker 风格仪表盘 */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+.profile-item {
+  padding: 14px 16px;
+  border-right: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+.profile-item:nth-last-child(-n + 2) { border-bottom: none; }
+.profile-item .k {
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.profile-item .v {
+  font-family: "SF Mono", ui-monospace, monospace;
+  font-size: 1.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.profile-item.text .v {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.tag-row {
+  margin-top: 14px;
+  border: 1px solid var(--hairline);
+  padding: 10px 14px;
+  display: flex;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  background: var(--surface);
+}
+.tag {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.tag::before {
+  content: "·";
+  color: var(--bb-orange);
+  margin-right: 6px;
+  font-weight: 700;
+}
+
+.profile-note {
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--warn);
+  background: var(--surface);
+  font-size: 0.92rem;
+  color: var(--ink);
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  line-height: 1.65;
+}
+.profile-note::before {
+  content: "校准提示";
+  display: block;
+  font-weight: 700;
+  color: var(--warn);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  margin-bottom: 4px;
+}
+
+/* 核心判断 — 简洁引用块,无装饰 label */
+.judgment {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 1.18rem;
+  line-height: 1.8;
+  color: var(--ink);
+  white-space: pre-wrap;
+  padding: 4px 0 4px 24px;
+  border-left: 4px solid var(--bb-orange);
+  font-weight: 500;
+}
+
+/* 卡片 — 数据条目风,行式紧凑 */
+.card {
+  margin-bottom: 0;
+  padding: 18px 0 18px 16px;
+  border-left: 4px solid var(--rule);
+  border-bottom: 1px solid var(--hairline);
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  column-gap: 32px;
+}
+.card.tier-冲 { border-left-color: var(--tier-冲); }
+.card.tier-稳 { border-left-color: var(--tier-稳); }
+.card.tier-保 { border-left-color: var(--tier-保); }
+.card.tier-避坑 { border-left-color: var(--tier-避坑); }
+
+.card-meta-line {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.66rem;
+  font-family: "SF Mono", monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-weight: 700;
+}
+.tier-label {
+  padding: 3px 10px;
+  background: var(--ink);
+  color: var(--paper);
+  letter-spacing: 0.22em;
+}
+.tier-label.tier-冲 { background: var(--tier-冲); }
+.tier-label.tier-稳 { background: var(--tier-稳); }
+.tier-label.tier-保 { background: var(--tier-保); }
+.tier-label.tier-避坑 { background: var(--tier-避坑); }
+.tier-label::before { content: ""; }
+
+.seq {
+  color: var(--ink-mute);
+  font-weight: 600;
+}
+.risk { margin-left: auto; }
+
+.card-title {
+  grid-column: 1 / -1;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+.card-subtitle {
+  grid-column: 1 / -1;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+  font-style: normal;
+}
+.card-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface);
+  margin-bottom: 14px;
+}
+.card-grid > div {
+  padding: 10px 14px;
+  border-right: 1px solid var(--hairline);
+}
+.card-grid > div:last-child { border-right: none; }
+.card-grid .k {
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-family: "SF Mono", monospace;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.card-grid .v {
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-table {
+  grid-column: 2;
+  grid-row: 5;
+  align-self: start;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  font-family: "SF Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  margin-top: -2px;
+}
+.history-table th {
+  font-weight: 700;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  text-align: right;
+  padding: 6px 10px 6px 0;
+  border-bottom: 2px solid var(--ink);
+}
+.history-table th:first-child { text-align: left; }
+.history-table td {
+  padding: 7px 10px 7px 0;
+  border-bottom: 1px solid var(--hairline);
+  text-align: right;
+  color: var(--ink);
+}
+.history-table td:first-child { text-align: left; color: var(--ink-mute); }
+.history-table tr:last-child td { border-bottom: none; }
+
+.risk {
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-family: "SF Mono", monospace;
+}
+.risk.稳 { color: var(--tier-稳); }
+.risk.中 { color: var(--bb-amber); }
+.risk.高 { color: var(--tier-冲); }
+.risk::before { content: "● "; font-size: 0.7em; vertical-align: middle; }
+
+.reason {
+  grid-column: 1;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  margin-bottom: 10px;
+}
+
+.replacement {
+  grid-column: 1 / -1;
+  background: oklch(96% 0.04 50);
+  border: 1px solid var(--bb-orange);
+  padding: 10px 14px;
+  margin-top: 10px;
+  font-size: 0.88rem;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  color: var(--ink);
+}
+.replacement-label {
+  display: block;
+  font-family: "SF Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--bb-orange);
+  margin-bottom: 4px;
+}
+
+.reminders {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin-top: 10px;
+  border-top: 1px dashed var(--rule);
+  padding-top: 8px;
+}
+.reminders li {
+  padding: 4px 0 4px 24px;
+  position: relative;
+  font-size: 0.85rem;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+.reminders li::before {
+  content: "▸";
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  color: var(--bb-orange);
+}
+
+/* 完整志愿表 — Bloomberg ticker 真表 */
+.code-warning {
+  font-family: "SF Mono", monospace;
+  background: oklch(98% 0.04 50);
+  border-top: 3px solid var(--bb-orange);
+  border-bottom: 1px solid var(--bb-orange);
+  padding: 10px 16px;
+  margin-bottom: 0;
+  font-size: 0.8rem;
+  color: var(--ink);
+  line-height: 1.6;
+}
+.code-warning b {
+  display: block;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bb-orange);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.code-warning .normal-text {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+}
+
+.full-list {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  font-family: "SF Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--ink);
+  border-top: none;
+}
+.full-list th {
+  font-weight: 700;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--paper);
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--ink);
+  border-right: 1px solid oklch(30% 0.02 240);
+}
+.full-list th:last-child { border-right: none; }
+.full-list td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hairline);
+  border-right: 1px solid var(--hairline);
+  color: var(--ink);
+  vertical-align: middle;
+}
+.full-list td:last-child { border-right: none; }
+.full-list tr:nth-child(even) { background: var(--surface); }
+.full-list tr:last-child td { border-bottom: none; }
+.full-list .num { width: 32px; color: var(--ink-mute); text-align: right; font-weight: 700; }
+.full-list .tier-cell {
+  width: 56px;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--paper);
+}
+.full-list .tier-cell.tier-冲 { background: var(--tier-冲); }
+.full-list .tier-cell.tier-稳 { background: var(--tier-稳); }
+.full-list .tier-cell.tier-保 { background: var(--tier-保); }
+.full-list .school { font-family: -apple-system, "PingFang SC", sans-serif; font-weight: 700; }
+.full-list .group { font-family: -apple-system, "PingFang SC", sans-serif; color: var(--ink-soft); }
+.full-list .rank { text-align: right; font-weight: 700; }
+.full-list .blurb {
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+/* 必聊 — 大字章节号 + 横线分隔(去掉终端命令风) */
+.discuss {
+  list-style: none;
+  counter-reset: item;
+}
+.discuss li {
+  padding: 22px 0 22px 80px;
+  border-top: 1px solid var(--hairline);
+  position: relative;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--ink);
+}
+.discuss li:last-child { border-bottom: 1px solid var(--hairline); }
+.discuss li::before {
+  counter-increment: item;
+  content: counter(item, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 18px;
+  font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 2.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  color: var(--bb-orange);
+  line-height: 1;
+}
+
+footer {
+  margin-top: 36px;
+  border-top: 4px solid var(--ink);
+  padding-top: 14px;
+  color: var(--ink-mute);
+  font-family: "SF Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  line-height: 1.7;
+}
+footer p:last-child {
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  body { padding: 20px 14px; max-width: 100%; }
+  header { grid-template-columns: 1fr; }
+  .deck { text-align: left; }
+  h1 { font-size: 1.8rem; }
+  .card { grid-template-columns: 1fr; }
+  .history-table { grid-column: 1; grid-row: auto; }
+  .full-list { display: block; overflow-x: auto; white-space: nowrap; }
+}
+
+@media print {
+  body { background: #fff; padding: 12px; max-width: none; }
+  .card { break-inside: avoid; }
+  section { break-inside: avoid; }
+}

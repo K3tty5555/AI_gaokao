@@ -32,6 +32,9 @@ help:
 	@echo "AI 志愿规划师 - 跨省自动化"
 	@echo ""
 	@echo "常用命令:"
+	@echo "  make test                   # 全省端到端测试 (31 省 × 本专科)"
+	@echo "  make test-fast              # 同上但跳过 query_school (更快)"
+	@echo "  make test-prov PROV=<省>   # 单省端到端测试"
 	@echo "  make crawl PROV=<省>        # 爬该省录取数据(后台,约 3-4h)"
 	@echo "  make crawl PROV=<省> FG=1    # 前台跑(看进度)"
 	@echo "  make update PROV=<省>       # crawl + 后续步骤引导"
@@ -51,10 +54,10 @@ crawl:
 	@echo "=== 爬 $(PROV) ($(PROV_ZH)) 录取数据,年份 $(YEARS) ==="
 	@mkdir -p logs
 ifeq ($(FG),1)
-	python3 crawl.py --prov $(PROV) --years $(YEARS)
+	python3 pipeline/crawl.py --prov $(PROV) --years $(YEARS)
 else
 	@echo "(后台模式,日志写到 logs/crawl_$(PROV).stdout.log)"
-	@nohup python3 -W ignore crawl.py --prov $(PROV) --years $(YEARS) > logs/crawl_$(PROV).stdout.log 2>&1 & \
+	@nohup python3 -W ignore pipeline/crawl.py --prov $(PROV) --years $(YEARS) > logs/crawl_$(PROV).stdout.log 2>&1 & \
 		echo "PID=$$!"
 	@echo "查看进度:tail -f logs/crawl_$(PROV).stdout.log"
 endif
@@ -111,6 +114,21 @@ verify:
 	@GAOKAO_PROV=$(PROV) python3 skill/_shared/scripts/score_to_rank.py --score 580 --type 物理类 --year 2024 2>&1 | head -3 || true
 
 
+.PHONY: test
+test:
+	@echo "=== 全省端到端测试 (31 省 × 本专科) ==="
+	python3 tests/e2e_all_provinces.py
+
+.PHONY: test-fast
+test-fast:
+	@echo "=== 全省端到端测试 (快速, 跳过 query_school) ==="
+	python3 tests/e2e_all_provinces.py --skip-slow
+
+.PHONY: test-prov
+test-prov:
+	@[ -n "$(PROV)" ] || (echo "用法: make test-prov PROV=hubei" && exit 1)
+	python3 tests/e2e_all_provinces.py --prov $(PROV)
+
 .PHONY: status
 status:
 	@echo "=== 当前覆盖省份状态 ==="
@@ -121,3 +139,15 @@ status:
 			echo "  ⏳ $$prov-zhiyuan (未建)"; \
 		fi; \
 	done
+
+
+.PHONY: import-yifenduan
+import-yifenduan:
+	@echo "=== 导入 $(PROV) $(YEAR) 一分一段表 ==="
+	@[ -n "$(FILE)" ] || (echo "用法: make import-yifenduan PROV=hubei YEAR=2025 TYPE=物理类 FILE=/path/to.csv" && exit 1)
+	python3 pipeline/import_score_dist.py --file $(FILE) --prov $(PROV) --year $(YEAR) --type $(TYPE)
+
+.PHONY: import-batch-lines
+import-batch-lines:
+	@echo "=== 录入 $(PROV) $(YEAR) 批次线 ==="
+	python3 pipeline/import_batch_lines.py --prov $(PROV) --year $(YEAR) $(if $(LINES),--lines "$(LINES)",)

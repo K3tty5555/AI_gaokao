@@ -4,7 +4,6 @@ logs/
 crawl*.log
 crawl*.stdout.log
 
-# 临时数据/工作区(skill-creator workspace 单独 commit 进 git,这里不用 ignore)
 # /tmp/ 不在项目根,无需 ignore
 
 # Python
@@ -28,3 +27,6 @@ Thumbs.db
 # 数据库:.db 文件已通过 .gitattributes 标为 binary,
 # 本项目主动把 data/gaokao_hubei.db 提交进 git(便于 clone 即用),
 # 所以这里不忽略 .db。
+
+# 咨询报告输出(用户数据,不进 git)
+output/
