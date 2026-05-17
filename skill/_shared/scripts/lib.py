@@ -200,19 +200,48 @@ def compute_risk(history_ranks):
         level = "high_risk"
         note_base = f"近年位次波动极大 (±{int(std)} 名),典型大小年"
 
-    # 趋势(最近 vs 最早)
-    first_r = ranks[0]
-    last_r = ranks[-1]
+    # 趋势判断：基于最近相邻2年（而非首尾比较），防止"过山车型"误导方向
     trend = "stable"
     trend_note = ""
-    if len(ranks) >= 2 and first_r > 0:
-        change = (first_r - last_r) / first_r  # >0 = 位次更靠前 = 分数涨
-        if change > 0.15:
-            trend = "rising_score"
-            trend_note = ";最近一年位次猛涨(分数飙升,**今年可能继续涨,慎重冲档**)"
-        elif change < -0.15:
-            trend = "dropping_score"
-            trend_note = ";最近一年位次回落(分数下滑,**今年可能反弹,稳档可考虑**)"
+    if len(ranks) >= 2:
+        sig = mean * 0.10  # 显著性阈值：均值的10%
+        recent_delta = ranks[-1] - ranks[-2]   # 正=rank变大=分数下滑
+
+        if len(ranks) >= 3:
+            prev_delta = ranks[-2] - ranks[-3]
+            recent_sig = abs(recent_delta) > sig
+            prev_sig = abs(prev_delta) > sig
+
+            if recent_sig and prev_sig:
+                same_dir = (recent_delta > 0) == (prev_delta > 0)
+                if not same_dir:
+                    # 方向相反：震荡型大小年，不给方向建议
+                    trend = "volatile"
+                    trend_note = ";近年位次方向不稳定(震荡型大小年),建议保守估计"
+                elif recent_delta < 0:
+                    # 连续2年rank下降 = 分数飙升，越来越难进
+                    trend = "rising_score"
+                    trend_note = ";近2年连续位次下降(分数飙升,**今年可能继续涨,慎重冲档**)"
+                else:
+                    # 连续2年rank上涨 = 分数下滑，越来越容易进
+                    trend = "dropping_score"
+                    trend_note = ";近2年连续位次上涨(分数下滑,**今年可能继续涨,慎重冲档**)"
+            elif recent_sig:
+                # 只有最近一年显著变化（前期稳定后突变）
+                if recent_delta < 0:
+                    trend = "rising_score"
+                    trend_note = ";最近一年位次猛涨(分数飙升,**今年可能反弹,稳档可考虑**)"
+                else:
+                    trend = "dropping_score"
+                    trend_note = ";最近一年位次回落(分数下滑,**今年可能反弹,稳档可考虑**)"
+        else:
+            # 仅2年数据：直接看方向
+            if recent_delta < -sig:
+                trend = "rising_score"
+                trend_note = ";最近一年位次猛涨(分数飙升,**今年可能反弹,稳档可考虑**)"
+            elif recent_delta > sig:
+                trend = "dropping_score"
+                trend_note = ";最近一年位次回落(分数下滑,**今年可能反弹,稳档可考虑**)"
 
     return {
         "level": level,
@@ -258,14 +287,15 @@ def compute_admission_probability(user_rank: int, history_ranks: list) -> dict:
     variance = sum((r - mean) ** 2 for r in ranks) / len(ranks)
     std = variance ** 0.5
 
-    if std == 0:
-        prob = 0.95 if user_rank <= mean else 0.05
-    else:
-        # P(min_section >= user_rank) = 1 - Φ((user_rank - mean) / std)
-        # 手动实现标准正态 CDF: Φ(x) = (1 + erf(x / sqrt(2))) / 2
-        z = (user_rank - mean) / std
-        phi = (1.0 + erf(z / sqrt(2.0))) / 2.0
-        prob = 1.0 - phi
+    # 经验概率：历史中 user_rank <= school_rank（录取线）的年份比例
+    # 大小年分布往往是偏态/双峰，正态 CDF 会低估极端值概率
+    emp_count = sum(1 for r in ranks if user_rank <= r)
+    emp_prob = emp_count / len(ranks)
+
+    # Laplace 收缩：样本量少时向 0.5 收缩，防止"3年全录取→显示95%安全"过度自信
+    # n=2→k=0.4; n=3→k=0.6; n=4→k=0.8; n≥5→k=1.0（纯经验）
+    k = min(len(ranks), 5) / 5.0
+    prob = k * emp_prob + (1.0 - k) * 0.5
 
     # clamp to [0.05, 0.95]
     prob = max(0.05, min(0.95, prob))
@@ -406,7 +436,7 @@ def classify_score(score: int, subject_type: str, year: int):
 
 
 def get_history_ranks(conn, school_id: int, type_id: str, special_group: str = None,
-                      min_year: int = 2023, extra_type_id: str = None):
+                      min_year: int = 2021, extra_type_id: str = None):
     """从 province_scores 拉历年最低位次序列,按年份升序返回 [(year, rank), ...]。
 
     粒度选择:

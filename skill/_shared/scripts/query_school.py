@@ -81,7 +81,7 @@ def query(
     only_211: bool = False,
     zslx_filter: Optional[str] = None,
     year_target: Optional[int] = None,
-    min_year: int = 2023,
+    min_year: int = 2021,
 ):
     # type_id 映射：覆盖三种体系
     #   3+1+2: 物理类=2073(+理科=1回退), 历史类=2074(+文科=2回退)
@@ -334,11 +334,14 @@ def query(
             "risk": risk,
             "admission_prob": admission,
         }
-        if chong_min <= s < chong_max:
+        # 归档基准：优先用历史均值位次，避免大小年年份被错误归档
+        # （如某校今年突然大年，实际位次远高于历史均值，若用实际值会被降档）
+        ref_rank = risk.get("mean") or s
+        if chong_min <= ref_rank < chong_max:
             chong.append(item)
-        elif wen_min <= s <= wen_max:
+        elif wen_min <= ref_rank <= wen_max:
             wen.append(item)
-        elif bao_min < s <= bao_max:
+        elif bao_min < ref_rank <= bao_max:
             bao.append(item)
 
     chong = sorted(chong, key=lambda x: x["min_section"])[:top_per_tier]
