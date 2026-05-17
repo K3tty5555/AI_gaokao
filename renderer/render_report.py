@@ -315,6 +315,22 @@ h2 .count {
 .history-table td:not(:first-child) {
   text-align: right;
 }
+.history-table tr.estimated td {
+  color: var(--ink-mute);
+  font-style: italic;
+}
+.history-table tr.estimated td:first-child::after {
+  content: " *";
+  color: var(--warn);
+  font-style: normal;
+  font-weight: 600;
+}
+.history-estimated-note {
+  font-size: 0.72rem;
+  color: var(--ink-mute);
+  margin-top: 4px;
+  padding-left: 2px;
+}
 
 .risk {
   font-size: 0.7rem;
@@ -569,14 +585,21 @@ def render_profile(p: dict) -> str:
 def render_history(rows) -> str:
     if not rows:
         return ""
+    has_estimated = any(r.get("estimated") for r in rows)
     head = "<tr><th>年份</th><th>投档分</th><th>最低位次</th></tr>"
-    body = "".join(
-        f"<tr><td>{esc(r.get('年份'))}</td>"
-        f"<td>{esc(r.get('投档分', '—'))}</td>"
-        f"<td>{esc(r.get('最低位次', '—'))}</td></tr>"
-        for r in rows
+    body_parts = []
+    for r in rows:
+        cls = ' class="estimated"' if r.get("estimated") else ""
+        body_parts.append(
+            f"<tr{cls}><td>{esc(r.get('年份'))}</td>"
+            f"<td>{esc(r.get('投档分', '—'))}</td>"
+            f"<td>{esc(r.get('最低位次', '—'))}</td></tr>"
+        )
+    note = (
+        '<p class="history-estimated-note">* 标注行为 AI 推算，非数据库实测值，误差可达 ±30 分，仅供方向参考</p>'
+        if has_estimated else ""
     )
-    return f'<table class="history-table">{head}{body}</table>'
+    return f'<table class="history-table">{head}{"".join(body_parts)}</table>{note}'
 
 
 def render_card(card: dict, idx: int) -> str:
