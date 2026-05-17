@@ -46,6 +46,11 @@ WEN_FRONT = 1000
 BAO_BACK = 1000     # 保:院校位次 ∈ [N+1000, N+5000]
 BAO_FRONT = 5000
 
+# SQL 层额外缓冲：均值归档后，若某校大小年导致最新年实际位次超出窗口，
+# 没有缓冲时该行根本进不了 Python 层，归档逻辑形同虚设。
+# 缓冲不影响最终归档精度（归档时仍用 ref_rank 严格过滤）。
+FETCH_BUFFER = 5000
+
 # 三档窗口 — 分数模式(分差,适用于无位次数据的省份如西藏)
 # 高分=好，窗口方向与位次相反
 CHONG_SCORE_UP = 40    # 冲:院校 min_score ∈ (user+5, user+40]
@@ -257,7 +262,9 @@ def query(
           AND ps.min_section != '-'
           AND CAST(ps.min_section AS INTEGER) BETWEEN ? AND ?
     """
-    params = [*type_ids, chong_min, bao_max]
+    # SQL 窗口外扩 FETCH_BUFFER：让大小年年份的学校也能进入 Python 层，
+    # 再由 ref_rank（历史均值）做精确归档。
+    params = [*type_ids, max(1, chong_min - FETCH_BUFFER), bao_max + FETCH_BUFFER]
 
     if year_target:
         sql += " AND CAST(ps.year AS INTEGER) = ?"
@@ -307,8 +314,15 @@ def query(
         if not matches_sg_info(r["sg_info"], user_subjects):
             continue
         s = r["section_int"]
+        # 优先用本专业组历史（精确口径）；不足2年时回退到全校口径
         history = get_history_ranks(conn, r["school_id"], str(r["type_id"]),
-                                    extra_type_id=extra_type_id)
+                                    special_group=r["special_group"],
+                                    extra_type_id=extra_type_id,
+                                    min_year=min_year)
+        if len(history) < 2:
+            history = get_history_ranks(conn, r["school_id"], str(r["type_id"]),
+                                        extra_type_id=extra_type_id,
+                                        min_year=min_year)
         risk = compute_risk(history)
         admission = compute_admission_probability(rank, history)
         item = {
@@ -334,9 +348,9 @@ def query(
             "risk": risk,
             "admission_prob": admission,
         }
-        # 归档基准：优先用历史均值位次，避免大小年年份被错误归档
-        # （如某校今年突然大年，实际位次远高于历史均值，若用实际值会被降档）
-        ref_rank = risk.get("mean") or s
+        # 归档基准：用 EWMA（近年加权均值），比等权均值更贴近趋势型院校实际
+        # fallback 链：ewma → mean → 当年实际位次
+        ref_rank = risk.get("ewma") or risk.get("mean") or s
         if chong_min <= ref_rank < chong_max:
             chong.append(item)
         elif wen_min <= ref_rank <= wen_max:
@@ -344,15 +358,20 @@ def query(
         elif bao_min < ref_rank <= bao_max:
             bao.append(item)
 
-    chong = sorted(chong, key=lambda x: x["min_section"])[:top_per_tier]
-    wen   = sorted(wen,   key=lambda x: x["min_section"])[:top_per_tier]
-    bao   = sorted(bao,   key=lambda x: x["min_section"], reverse=True)[:top_per_tier]
+    def _tier_weight(item: dict) -> int:
+        """层次权重：985=0, 211=1, 双非=2（同档内层次高的优先展示）"""
+        return 0 if item["f985"] else (1 if item["f211"] else 2)
+
+    chong = sorted(chong, key=lambda x: (_tier_weight(x), x["min_section"]))[:top_per_tier]
+    wen   = sorted(wen,   key=lambda x: (_tier_weight(x), x["min_section"]))[:top_per_tier]
+    bao   = sorted(bao,   key=lambda x: (_tier_weight(x), -x["min_section"]))[:top_per_tier]
 
     return {
         "input": {
             "rank": rank,
             "score": score,
             "mode": "rank",
+            "province": os.environ.get("GAOKAO_PROV", ""),
             "subject_type": subject_type,
             "combo": combo,
             "user_subjects": sorted(user_subjects),
@@ -372,7 +391,7 @@ def fmt_human(result: dict) -> str:
     out = []
     inp = result["input"]
     out.append(
-        f"# 召回结果(湖北 {inp['subject_type']},位次 {inp['rank']},选科 {inp['combo']})"
+        f"# 召回结果({inp.get('province', inp['subject_type'])} {inp['subject_type']},位次 {inp['rank']},选科 {inp['combo']})"
     )
     win = result["windows"]
     out.append(
@@ -452,8 +471,8 @@ def main() -> int:
     p.add_argument("--zslx", type=str, default=None,
                    help="招生类型过滤(普通类/国家专项计划/地方专项计划/民族班等)")
     p.add_argument("--year", type=int, default=None, help="只看指定年份(覆盖 --min-year)")
-    p.add_argument("--min-year", type=int, default=2023,
-                   help="最早可用年份(默认 2023)")
+    p.add_argument("--min-year", type=int, default=2021,
+                   help="最早可用年份(默认 2021)")
     p.add_argument("--json", action="store_true", help="JSON 输出(给 agent 调用)")
 
     args = p.parse_args()

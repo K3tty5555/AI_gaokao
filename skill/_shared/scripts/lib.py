@@ -186,6 +186,12 @@ def compute_risk(history_ranks):
     std = variance ** 0.5
     cv = std / mean if mean > 0 else 0
 
+    # EWMA（指数加权移动平均）：对趋势型院校比等权均值更贴近近年实际
+    # alpha=0.4：最近年权重最高，越早年份权重指数衰减
+    ewma_val = float(ranks[0])
+    for r in ranks[1:]:
+        ewma_val = 0.4 * r + 0.6 * ewma_val
+
     # 风险等级阈值
     if cv < 0.05:
         level = "stable"
@@ -223,7 +229,7 @@ def compute_risk(history_ranks):
                     trend = "rising_score"
                     trend_note = ";近2年连续位次下降(分数飙升,**今年可能继续涨,慎重冲档**)"
                 else:
-                    # 连续2年rank上涨 = 分数下滑，越来越容易进
+                    # 连续2年rank上涨 = 分数下滑，越来越容易进但可能反弹变难
                     trend = "dropping_score"
                     trend_note = ";近2年连续位次上涨(分数下滑,**今年可能继续涨,慎重冲档**)"
             elif recent_sig:
@@ -232,8 +238,9 @@ def compute_risk(history_ranks):
                     trend = "rising_score"
                     trend_note = ";最近一年位次猛涨(分数飙升,**今年可能反弹,稳档可考虑**)"
                 else:
+                    # 单年暴跌：分数下滑，但前期稳定说明基本面未变，反弹风险高
                     trend = "dropping_score"
-                    trend_note = ";最近一年位次回落(分数下滑,**今年可能反弹,稳档可考虑**)"
+                    trend_note = ";最近一年位次回落(分数下滑,**今年可能反弹变难,填报请参考历史均值而非今年分数**)"
         else:
             # 仅2年数据：直接看方向
             if recent_delta < -sig:
@@ -241,12 +248,13 @@ def compute_risk(history_ranks):
                 trend_note = ";最近一年位次猛涨(分数飙升,**今年可能反弹,稳档可考虑**)"
             elif recent_delta > sig:
                 trend = "dropping_score"
-                trend_note = ";最近一年位次回落(分数下滑,**今年可能反弹,稳档可考虑**)"
+                trend_note = ";最近一年位次回落(分数下滑,**今年可能反弹变难,填报请参考历史均值**)"
 
     return {
         "level": level,
         "cv": round(cv, 3),
         "mean": int(mean),
+        "ewma": int(ewma_val),   # 指数加权均值，对趋势型院校比等权均值更准
         "std": int(std),
         "trend": trend,
         "note": note_base + trend_note,
